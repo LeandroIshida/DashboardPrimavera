@@ -383,7 +383,7 @@ img, svg { max-width: 100%; height: auto; }
 /* texto em uma camada acima */
 .level-value{
   position: absolute;
-  left: 0; right: 0; bottom: 6px;   /* ajusta a distância da base */
+  left: 0; right: 0; bottom: 80%;   /* ajusta a distância da base */
   display: flex; justify-content: center; align-items: center;
   font-weight: 600;
   color: #0b2239;
@@ -391,6 +391,11 @@ img, svg { max-width: 100%; height: auto; }
   z-index: 2;                        /* fica na frente do fill */
   pointer-events: none;              /* evita capturar cliques */
 }
+
+/* tema escuro: só o texto do gráfico fica branco */
+:root[data-theme="dark"] .level-value { color:#fff; }
+
+
 
 /* Cores das barras */
 .fill-orange{ background:#F2994A; }
@@ -772,6 +777,39 @@ img, svg { max-width: 100%; height: auto; }
 }
 
 .emg-group { display: flex; align-items: center; gap: 12px; }
+
+:root{
+  --level-radius: 20px;   /* deixe igual ao raio da sua cápsula */
+  --level-stroke: 4px;    /* espessura do “stroke outside” */
+}
+
+/* wrapper que recebe a borda por fora */
+.level-frame{
+  display: inline-flex;
+  border-radius: var(--level-radius);
+}
+
+/* stroke fora (estilo Figma “outside”) */
+.level-frame.is-full{
+  box-shadow: 0 0 0 var(--level-stroke) #ff2b2b; /* outside stroke */
+  border-radius: var(--level-radius);
+}
+
+/* a barra continua clipando o preenchimento */
+.level-bar{
+  position: relative;
+  border-radius: var(--level-radius);
+  overflow: hidden;
+}
+
+/* textos em vermelho quando cheio */
+.level-value.is-full,
+.level-current.is-full{
+  color: #ff2b2b;
+  font-weight: 700;
+}
+
+
 
 
 

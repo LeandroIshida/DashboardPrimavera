@@ -114,15 +114,20 @@ const Dashboard = () => {
   const TOTAL_CAPEV_L = num(tags["cap_total_evap"] ?? tags["capTotal"], 13570);
 
   const buildLevel = (atualL, totalL) => {
-    const total = Math.max(1, num(totalL, 1));
-    const atual = Math.max(0, num(atualL, 0));
-    const pct = Math.round(Math.min(100, Math.max(0, (atual / total) * 100)));
-    return { atual, total, pct, h: `${pct}%` };
-  };
-
+  const total = Math.max(1, num(totalL, 1));
+  const atual = Math.max(0, num(atualL, 0));
+  const rawPct = (atual / total) * 100;
+  const pct = Math.round(Math.min(100, Math.max(0, rawPct)));
+  const isFull = atual >= total || rawPct >= 99.5; // tolerância de 0,5%
+  return { atual, total, pct, h: `${pct}%`, isFull };
+};
   const lvlEflu = buildLevel(tags["nivel_tanque_1"], TOTAL_CAPEF_L);
   const lvlTrat = buildLevel(tags["nivel_tanque_2"], TOTAL_CAPT_L);
   const lvlEvap = buildLevel(tags["nivel_tanque_3"], TOTAL_CAPEV_L);
+  
+  //const lvlEflu = buildLevel(2670, TOTAL_CAPEF_L);
+  //const lvlTrat = buildLevel(1100/2, TOTAL_CAPT_L);
+  //const lvlEvap = buildLevel(13570, TOTAL_CAPEV_L);
 
   // ===== Timer =====
   const TOTAL_MINUTES = 12 * 60; // 12 horas (ajuste se quiser)
@@ -281,47 +286,75 @@ const devSetMinutes = (mins) => setTags(t => ({
           <div className="levels-grid">
             {/* Efluente */}
             <div className="level-item">
-              <div className="level-name">Efluente</div>
-              <div className="level-bar">
-                <div className="level-fill fill-orange" style={{ height: lvlEflu.h }} />
-                <div className="level-value">{lvlEflu.pct}%</div>
-              </div>
-              <div className="level-cap">
-                <div><strong>Capacidade:</strong></div>
-                <div>Total: {TOTAL_CAPEF_L}L</div>
-                <div>Atual: {lvlEflu.atual}L</div>
-              </div>
-            </div>
+  <div className="level-name">Efluente</div>
 
-            {/* Tratamento */}
-            <div className="level-item">
-              <div className="level-name">Tratamento</div>
-              <div className="level-bar">
-                <div className="level-fill fill-blue" style={{ height: lvlTrat.h }}>
-                  <div className="level-value">{lvlTrat.pct}%</div>
-                </div>
-              </div>
-              <div className="level-cap">
-                <div><strong>Capacidade:</strong></div>
-                <div>Total: {TOTAL_CAPT_L}L</div>
-                <div>Atual: {lvlTrat.atual}L</div>
-              </div>
-            </div>
+  <div className={`level-frame ${lvlEflu.isFull ? 'is-full' : ''}`}>
+    <div className="level-bar">
+      <div className="level-fill fill-orange" style={{ height: lvlEflu.h }}>
+        <div className={`level-value ${lvlEflu.isFull ? 'is-full' : ''}`}>
+          {lvlEflu.pct}%
+        </div>
+      </div>
+    </div>
+  </div>
 
-            {/* Evaporação */}
-            <div className="level-item">
-              <div className="level-name">Evaporação</div>
-              <div className="level-bar">
-                <div className="level-fill fill-green" style={{ height: lvlEvap.h }}>
-                  <div className="level-value">{lvlEvap.pct}%</div>
-                </div>
-              </div>
-              <div className="level-cap">
-                <div><strong>Capacidade:</strong></div>
-                <div>Total: {TOTAL_CAPEV_L}L</div>
-                <div>Atual: {lvlEvap.atual}L</div>
-              </div>
-            </div>
+  <div className="level-cap">
+    <div><strong>Capacidade:</strong></div>
+    <div>Total: {TOTAL_CAPEF_L}L</div>
+    <div className={`level-current ${lvlEflu.isFull ? 'is-full' : ''}`}>
+      Atual: {lvlEflu.isFull ? 'Cheio' : `${lvlEflu.atual}L`}
+    </div>
+  </div>
+</div>
+
+{/* Tratamento */}
+<div className="level-item">
+  <div className="level-name">Tratamento</div>
+
+  <div className={`level-frame ${lvlTrat.isFull ? 'is-full' : ''}`}>
+    <div className="level-bar">
+      <div className="level-fill fill-blue" style={{ height: lvlTrat.h }}>
+        <div className={`level-value ${lvlTrat.isFull ? '' : ''}`}>
+          {lvlTrat.pct}%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div className="level-cap">
+    <div><strong>Capacidade:</strong></div>
+    <div>Total: {TOTAL_CAPT_L}L</div>
+    <div className={`level-current ${lvlTrat.isFull ? 'is-full' : ''}`}>
+      Atual: {lvlTrat.isFull ? 'Cheio' : `${lvlTrat.atual}L`}
+    </div>
+  </div>
+</div>
+
+{/* Evaporação */}
+<div className="level-item">
+  <div className="level-name">Evaporação</div>
+
+  <div className={`level-frame ${lvlEvap.isFull ? 'is-full' : ''}`}>
+    <div className="level-bar">
+      <div className="level-fill fill-green" style={{ height: lvlEvap.h }}>
+        <div className={`level-value ${lvlEvap.isFull ? '' : ''}`}>
+          {lvlEvap.pct}%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div className="level-cap">
+    <div><strong>Capacidade:</strong></div>
+    <div>Total: {TOTAL_CAPEV_L}L</div>
+    <div className={`level-current ${lvlEvap.isFull ? 'is-full' : ''}`}>
+      Atual: {lvlEvap.isFull ? 'Cheio' : `${lvlEvap.atual}L`}
+    </div>
+  </div>
+</div>
+
+
+
           </div>
         </Card>
 
