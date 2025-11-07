@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { getAllTags } from '../services/api';  // Ajuste o caminho conforme necessário
 import { fmt } from '../services/normalize';  // Ajuste o caminho conforme necessário
 import Card from '../components/Card';  // Ajuste o caminho conforme necessário
 import '../styles/dashboard.css';  // Verifique se o caminho está correto
 import InfoBtn from "../components/InfoBtn";
-//import { getTagsValues, cmdEmergencia, cmdReset } from "../lib/api";
 import { getTagsValues, cmdEmergencia, cmdReset } from '../lib/api';
 
 
@@ -190,16 +188,26 @@ const Dashboard = () => {
 
   // KPIs extras
   const areaLimpaL = (() => {
-    const l = Number(tags["areaLimpaLitros"]);
-    const m3 = Number(tags["areaLimpaM3"]);
-    if (Number.isFinite(l) && l >= 0) return l;
-    if (Number.isFinite(m3) && m3 >= 0) return m3 * 1000;
-    return 0;
-  })();
+  const L = Number(tags["arealimpa"]);
+  return Number.isFinite(L) && L >= 0 ? L : 0;
+})();
   const treesCount = Math.floor(areaLimpaL / 1000);
-  const fishCount = Number(tags["peixesSalvos"] ?? 0);
-  const carbonCount = Number(tags["carbonoEvitado"] ?? 0);
+  //const fishCount = Number(tags["arealimpa"] ?? 0);
+  // ---- CO2 evitado (kg) a partir de litros tratados ----
+// Base de comparação: água engarrafada de 1,5 L  → 0,109 kg CO2 por litro
+// (se preferir 500 mL: use 0,166 kg/L)
+// Emissão do próprio ozônio (opcional): kWh/m³ * fator da rede / 1000
+const CO2_PER_LITER = 0.109;     // kg CO2 / L (ajuste se quiser base 500 mL: 0.166)
+const OZ_KWH_PER_M3 = 0.08;      // kWh por m³ do seu sistema (ajuste se tiver medição)
+const GRID_KG_PER_KWH = 0.035;   // kg CO2/kWh (média BR; ajuste se quiser)
+const CO2_OZONE_PER_L = (OZ_KWH_PER_M3 * GRID_KG_PER_KWH) / 1000; // kg/L
 
+// CO2 líquido evitado = evitado (garrafas) - emissão do processo de ozônio
+const carbonCount = Math.max(areaLimpaL * (CO2_PER_LITER - CO2_OZONE_PER_L), 0); // kg
+
+// lê a tag e converte pra número
+const emergenciaAtiva = Number(tags?.["emergencia_fb"]) === 1;
+//const emergenciaAtiva = true;
 
 
 
@@ -242,6 +250,13 @@ const devSetMinutes = (mins) => setTags(t => ({
       {/* HEADER com botão no canto direito */}
       <div className="dashboard-header">
   <h1 className="dashboard-title">Dashboard Industrial</h1>
+    
+ <div className="header-actions">
+ {emergenciaAtiva && (
+  <div className="emg-group" role="status" aria-live="polite" title="Sinal de emergência ativo">
+          <div className="badge-emergencia">🚨 Painel em emergência</div>
+          </div>
+ )}
 
   <div className="header-actions">
     <button className="btn btn-stop"  onClick={handleStop}  disabled={busyStop}>Parar</button>
@@ -255,6 +270,7 @@ const devSetMinutes = (mins) => setTags(t => ({
       {theme === 'light' ? '🌙' : '☀️'}
     </button>
   </div>
+</div>
 </div>
 
       {/* Cards de Sensores e Ozônio */}
@@ -336,16 +352,16 @@ const devSetMinutes = (mins) => setTags(t => ({
       >i</InfoBtn>
     </div>
 
-    {/* Peixes */}
+    {/* Água Limpa */}
     <div className="impact-item">
       <div className="impact-left">
         <span className="emoji" role="img" aria-label="peixe">💧</span>
-        <span className="impact-text">{fishCount}L Água tratada</span>
+        <span className="impact-text">{areaLimpaL}L Água tratada</span>
       </div>
       <InfoBtn
         className="info-btn"
-        data-tip="Exemplo: quantidade estimada de peixes beneficiados (definir fórmula)."
-        tip="Exemplo: quantidade estimada de peixes beneficiados (definir fórmula)."
+        data-tip="Litros de água tratados no período."
+        tip="Litros de água tratados no período."
       >i</InfoBtn>
     </div>
 
@@ -353,12 +369,12 @@ const devSetMinutes = (mins) => setTags(t => ({
     <div className="impact-item">
       <div className="impact-left">
         <span className="emoji" role="img" aria-label="carbono">🌿</span>
-        <span className="impact-text">{carbonCount} </span>
+        <span className="impact-text">{carbonCount}kg CO₂</span>
       </div>
       <InfoBtn
         className="info-btn"
-        data-tip="Exemplo: CO₂ evitado (definir fórmula e unidade)."
-        tip="Exemplo: CO₂ evitado (definir fórmula e unidade)."
+        data-tip="Estimativa: 1.000 L ≈ 166 kg de CO₂ evitados."
+        tip="Estimativa: 1.000 L ≈ 166 kg de CO₂ evitados."
       >i</InfoBtn>
     </div>
   </div>

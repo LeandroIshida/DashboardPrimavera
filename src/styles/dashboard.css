@@ -1,4 +1,19 @@
 /* src/pages/dashboard.css */
+/* guarda-corpo global */
+* { box-sizing: border-box; }
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip; /* use hidden se clip não existir no seu alvo */
+}
+
+/* imagens/SVG nunca estouram */
+img, svg { max-width: 100%; height: auto; }
+
+/* se usar CSS Grid, evite expansão por min-content */
+.grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+
+
 .dashboard {
   padding: 20px;
   font-family: Arial, sans-serif;
@@ -730,6 +745,34 @@
   .info-btn[data-tip]::after{ left:50%!important; right:auto!important; }
   .info-btn{ --fallback-pos: bottom; }
 }
+
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.badge-emergencia {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 2px solid #ff2b2b;
+  color: #ff2b2b;
+  
+  border-radius: 14px;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(255,43,43,0.15) inset;
+}
+
+.badge-emergencia .badge-icon {
+  flex: 0 0 auto;
+}
+
+.emg-group { display: flex; align-items: center; gap: 12px; }
+
 
 
 
