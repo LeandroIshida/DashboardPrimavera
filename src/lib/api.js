@@ -41,7 +41,7 @@ export async function getTagsValues() {
 
 export async function cmdEmergencia(pulseMs = 400) {
   const r = await fetch(
-    `${API_BASE}/backend/api/cmd/emergencia?pulseMs=${pulseMs}`,
+    `${API_BASE}/api/cmd/parar?pulseMs=${pulseMs}`,
     { method: "POST" }
   );
   if (!r.ok) throw new Error(`Falha ao acionar EMERGÊNCIA (HTTP ${r.status})`);
@@ -49,7 +49,7 @@ export async function cmdEmergencia(pulseMs = 400) {
 
 export async function cmdReset(pulseMs = 400) {
   const r = await fetch(
-    `${API_BASE}/backend/api/cmd/reset?pulseMs=${pulseMs}`,
+    `${API_BASE}/api/cmd/reset?pulseMs=${pulseMs}`,
     { method: "POST" }
   );
   if (!r.ok) throw new Error(`Falha ao enviar RESET (HTTP ${r.status})`);
