@@ -332,7 +332,7 @@ const devSetMinutes = (mins) => setTags(t => ({
 
 {/* Evaporação */}
 <div className="level-item">
-  <div className="level-name">Evaporação</div>
+  <div className="level-name">Evaporador</div>
 
   <div className={`level-frame ${lvlEvap.isFull ? 'is-full' : ''}`}>
     <div className="level-bar">
