@@ -232,7 +232,7 @@ img, svg { max-width: 100%; height: auto; }
 .sensores-card { grid-column: 1 / span 6; grid-row: span 2; }
 .ozonio-card   { grid-column: 7 / span 2; }
 .motores-card  { grid-column: 7 / span 4; }
-.timer-card    { grid-column: 11 / span 2; grid-row: span 2; grid-row: 1 / span 2;     /* força iniciar na linha 1 */}
+.timer-card    { grid-column: 11 / span 2; grid-row: span 2; grid-row: 1 / span 2;     /* força iniciar na linha 1 */ }
 
 .kpi3 { grid-column: span 4; }  /* LL, LN, Corrente */
 .kpi1 { grid-column: span 2; }  /* Consumo, Demanda, etc. */
@@ -383,14 +383,20 @@ img, svg { max-width: 100%; height: auto; }
 /* texto em uma camada acima */
 .level-value{
   position: absolute;
-  left: 0; right: 0; bottom: 80%;   /* ajusta a distância da base */
-  display: flex; justify-content: center; align-items: center;
+  left: 0;
+  right: 0;
+  top: 50%;                 /* posiciona no meio vertical */
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-weight: 600;
-  color: #0b2239;
+  color: #0b2239;           /* no tema dark você já sobrescreve pra branco */
   line-height: 1;
-  z-index: 2;                        /* fica na frente do fill */
-  pointer-events: none;              /* evita capturar cliques */
+  z-index: 2;
+  pointer-events: none;
 }
+
 
 /* tema escuro: só o texto do gráfico fica branco */
 :root[data-theme="dark"] .level-value { color:#fff; }
@@ -445,7 +451,7 @@ img, svg { max-width: 100%; height: auto; }
 
 .dashboard-title{
   margin:0;
-  font-size:28px;
+  font-size:24px;
   font-weight:700;
   color: var(--text);
 }
@@ -498,9 +504,6 @@ img, svg { max-width: 100%; height: auto; }
 }
 
 
-/* mantenha o resto do seu CSS (grids, kpIs etc.) */
-
-
 /* ===== Timer Circular ===== */
 .timer-wrap {
   display:flex; flex-direction:column; align-items:center; gap:12px;
@@ -535,7 +538,7 @@ img, svg { max-width: 100%; height: auto; }
 
 .dashboard-title{
   margin:0;
-  font-size:28px;
+  font-size:24px;
   font-weight:700;
   color: var(--text);
 }
@@ -589,7 +592,13 @@ img, svg { max-width: 100%; height: auto; }
 }
 
 /* ---- spans/larguras na grade (mantém seu grid de 12 colunas) ---- */
-.motores-combined-card { grid-column: span 4; } /* igual aos kpi3 */
+/* AJUSTE: motores mais próximos do topo */
+.motores-combined-card {
+  grid-column: span 4;
+  justify-content: flex-start;   /* sobe o conteúdo */
+  align-items: center;
+  padding-top: 8px;              /* margem de cima menor */
+}
 .cycle-card, .impacto-card { grid-column: span 2; } /* igual aos kpi1 */
 
 /* ---- card Motores (3 colunas internas) ---- */
@@ -601,10 +610,23 @@ img, svg { max-width: 100%; height: auto; }
   justify-items: center;
 }
 
-.motor-item { text-align: center; }
-.motor-item .motor-title { font-weight: 600; margin-bottom: 8px; margin-top: 10px; }
+/* cada motor vira uma coluna flex, centralizada */
+.motor-item {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
 
-/* aproveita seus estilos de dot/texto */
+.motor-item .motor-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  margin-top: 6px;   /* fica mais perto da borda do card */
+}
+
+/* reaproveita seus estilos de dot/texto */
 .state-row{ display:flex; align-items:center; gap:10px; justify-content:center; }
 .state-dot{
   width:16px; height:16px; border-radius:999px; display:inline-block;
@@ -653,20 +675,49 @@ img, svg { max-width: 100%; height: auto; }
 .impacto-card { padding-top: 18px; padding-bottom: 18px; }
 
 /* lista */
-.impacto-list{ display:flex; flex-direction:column; gap:14px; }
+.impacto-list{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 
-/* item */
-.impact-item{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
-.impact-left{ display:flex; align-items:center; gap:12px; }
+/* item: ícone + texto à esquerda, botão "i" à direita */
+.impact-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
 
-/* ícone (pode trocar por SVG depois) */
+.impact-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+/* coluna fixa para o ícone (emoji ou span personalizado)  */
+.impact-icon,
+.impact-item .emoji{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  flex:0 0 24px;  /* largura fixa → texto sempre começa no mesmo ponto */
+}
+
+/* se ainda usar ic-circle em algum lugar, mantém */
 .ic-circle{
-  width:18px; height:18px; border-radius:999px; background:#22c55e; /* verde */
+  width:18px; height:18px; border-radius:999px; background:#22c55e;
   display:inline-block; flex:0 0 18px;
 }
 
 /* texto principal */
-.impact-text{ color: var(--text); font-weight:500; }
+.impact-text{
+  color: var(--text);
+  font-weight:500;
+  white-space: nowrap;  /* 2150L não quebra e alinha bonitinho */
+}
 
 /* botão info + tooltip */
 .info-btn{
@@ -808,10 +859,3 @@ img, svg { max-width: 100%; height: auto; }
   color: #ff2b2b;
   font-weight: 700;
 }
-
-
-
-
-
-
-
