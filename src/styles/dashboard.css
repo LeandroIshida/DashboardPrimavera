@@ -859,3 +859,103 @@ img, svg { max-width: 100%; height: auto; }
   color: #ff2b2b;
   font-weight: 700;
 }
+
+/* título acima do círculo */
+.timer-title-top{
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+
+/* mantém layout empilhado */
+.timer-wrap--stack{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+
+/* sobe levemente o círculo */
+.timer-wrap--stack .timer-ring{
+  margin-top: -6px;
+}
+
+
+/* texto "Tempo do ciclo atual" */
+.timer-label{
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+
+/* sub horário (--:--) */
+.timer-subtime{
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+
+/* botões */
+.timer-actions{
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+
+.level-min{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+.level-min .info-btn{
+  margin-left: 2px;
+}
+
+
+/*botoes do timer*/
+/* Botão RETOMAR */
+.btn-resume{
+  background: #ffffff;
+  color: #1e6bd6;           /* azul */
+  border: 2px solid #1e6bd6;
+  font-weight: 600;
+}
+
+.btn-resume:hover:not(:disabled){
+  background: #1e6bd6;
+  color: #ffffff;
+}
+
+.btn-resume:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Botão PAUSAR (vermelho) */
+.btn-pause-danger{
+  background: #d32f2f;
+  color: #ffffff;
+  border: 2px solid #d32f2f;
+  font-weight: 600;
+}
+
+.btn-pause-danger:hover:not(:disabled){
+  background: #b71c1c;
+  border-color: #b71c1c;
+}
+
+.btn-pause-danger:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.timer-fg {
+  transition: stroke-dashoffset 0.9s linear;
+}

@@ -70,3 +70,42 @@ export async function cmdReset(pulseMs = 400) {
     throw new Error(`Falha ao enviar RESET (HTTP ${r.status})`);
   }
 }
+
+/**
+ * Comando de reset
+ * Mantendo /api/cmd/resume?pulseMs=...
+ */
+export async function cmdResume(pulseMs = 400) {
+  const r = await fetch(`${API_BASE}/api/cmd/resume?pulseMs=${pulseMs}`, {
+    method: "POST",
+  });
+  if (!r.ok) {
+    throw new Error(`Falha ao enviar RESUME (HTTP ${r.status})`);
+  }
+}
+
+/**
+ * Comando de reset
+ * Mantendo /api/cmd/reset?pulseMs=...
+ */
+export async function cmdStoptime(pulseMs = 400) {
+  const r = await fetch(`${API_BASE}/api/cmd/stoptime?pulseMs=${pulseMs}`, {
+    method: "POST",
+  });
+  if (!r.ok) {
+    throw new Error(`Falha ao enviar STOPTIME (HTTP ${r.status})`);
+  }
+}
+
+/**
+ * Comando de reset
+ * Mantendo /api/cmd/reset?pulseMs=...
+ */
+export async function cmdEmpty(pulseMs = 400) {
+  const r = await fetch(`${API_BASE}/api/cmd/empty?pulseMs=${pulseMs}`, {
+    method: "POST",
+  });
+  if (!r.ok) {
+    throw new Error(`Falha ao enviar EMPTY (HTTP ${r.status})`);
+  }
+}

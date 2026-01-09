@@ -3,7 +3,7 @@ import { fmt } from "../services/normalize";
 import Card from "../components/Card";
 import "../styles/dashboard.css";
 import InfoBtn from "../components/InfoBtn";
-import { getTagsValues, cmdEmergencia, cmdReset } from "../lib/api";
+import { getTagsValues, cmdEmergencia, cmdReset, cmdResume, cmdStoptime, cmdEmpty } from "../lib/api";
 
 const Dashboard = () => {
   const [tags, setTags] = useState({});
@@ -58,6 +58,11 @@ const Dashboard = () => {
   // ===== Handlers comandos =====
   const [busyStop, setBusyStop] = useState(false);
   const [busyReset, setBusyReset] = useState(false);
+  const [busyPause, setBusyPause] = useState(false);
+  const [busyResume, setBusyResume] = useState(false);
+  const [busyEmpty, setBusyEmpty] = useState(false);
+
+
 
   const handleStop = async () => {
     try {
@@ -80,6 +85,29 @@ const Dashboard = () => {
       setBusyReset(false);
     }
   };
+
+const handlePauseCycle = async () => {
+  try {
+    setBusyPause(true);
+    await cmdStoptime(400);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setBusyPause(false);
+  }
+};
+
+const handleResumeCycle = async () => {
+  try {
+    setBusyResume(true);
+    await cmdResume(400);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setBusyResume(false);
+  }
+};
+
 
   // ===== Helpers =====
   const motorStatusBool = (run, fault) => {
@@ -110,12 +138,20 @@ const Dashboard = () => {
     return { cls: "state-off", label: "Parado" };
   };
 
-  const ciclo = cycleFromBits(tags["ciclo_iniciar"], tags["ciclo_finalizado"]);
+  const ciclo = cycleFromBits(tags["ciclo_iniciar"], tags["ciclo_finalizado"], tags["ciclo_parado"]);
 
   // Capacidades (litros)
   const TOTAL_CAPEF_L = num(tags["cap_total_ef"] ?? tags["capTotal"], 2670);
   const TOTAL_CAPT_L = num(tags["cap_total_trat"] ?? tags["capTotal"], 1100);
   const TOTAL_CAPEV_L = num(tags["cap_total_evap"] ?? tags["capTotal"], 13570);
+
+  // Capacidades minimas(litros)
+  //const MIN_CAPEF_L = num(tags["cap_min_ef"] ?? tags["capMin"], 500);
+  const MIN_CAPT_L = num(tags["cap_min_trat"] ?? tags["capMin"], 150);
+  //const MIN_CAPEV_L = num(tags["cap_min_evap"] ?? tags["capMin"], 600);
+
+
+
 
   const buildLevel = (atualL, totalL) => {
     const total = Math.max(1, num(totalL, 1));
@@ -133,66 +169,96 @@ const Dashboard = () => {
   // const lvlTrat = buildLevel(1100/2, TOTAL_CAPT_L);
   // const lvlEvap = buildLevel(13570, TOTAL_CAPEV_L);
 
-  // ===== Timer =====
-  const TOTAL_MINUTES = 12 * 60; // 12 horas (ajuste se quiser)
-  const totalSecondsDefault = TOTAL_MINUTES * 60;
-  const totalSeconds =
-    Number(tags["totalSec"]) > 0 ? Number(tags["totalSec"]) : totalSecondsDefault;
+// ===== Timer (calculado no FRONT + persistente no refresh) =====
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
-  const [remaining, setRemaining] = useState(totalSeconds);
-  const [running, setRunning] = useState(false);
-  const prevStartRef = useRef(0);
-  const prevFinishRef = useRef(0);
+const minutesToHHMM = (min) => {
+  const totalMin = Math.max(0, Math.floor(Number(min) || 0));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${String(h).padStart(1, "0")}:${String(m).padStart(2, "0")}`;
+};
 
-  useEffect(() => {
-    setRemaining(totalSeconds);
-  }, [totalSeconds]);
+// total vindo do CLP (min)
+const totalMinutesFromClp = Math.max(0, Math.floor(Number(tags["Timer"]) || 0));
+const totalMinutes = totalMinutesFromClp > 0 ? totalMinutesFromClp : 12 * 60;
 
-  // start
-  useEffect(() => {
-    const startVal = tags["ciclo_iniciar"] ? 1 : 0;
-    if (prevStartRef.current !== 1 && startVal === 1) {
-      setRemaining(totalSeconds);
-      setRunning(true);
+// chaves no storage (por segurança, separadas)
+const LS_START = "cycle_start_epoch_ms";
+const LS_TOTAL = "cycle_total_minutes";
+
+// estado calculado (minutos restantes)
+const [remainingMin, setRemainingMin] = useState(totalMinutes);
+
+const prevStartRef = useRef(0);
+const prevFinishRef = useRef(0);
+
+// 1) Ao receber start do CLP, salva início no localStorage
+useEffect(() => {
+  const startVal = tags["ciclo_iniciar"] ? 1 : 0;
+
+  if (prevStartRef.current !== 1 && startVal === 1) {
+    const now = Date.now();
+    localStorage.setItem(LS_START, String(now));
+    localStorage.setItem(LS_TOTAL, String(totalMinutes));
+  }
+
+  prevStartRef.current = startVal;
+}, [tags, totalMinutes]);
+
+// 2) Ao receber finish do CLP, limpa o localStorage
+useEffect(() => {
+  const finVal = tags["ciclo_finalizado"] ? 1 : 0;
+
+  if (prevFinishRef.current !== 1 && finVal === 1) {
+    localStorage.removeItem(LS_START);
+    localStorage.removeItem(LS_TOTAL);
+    setRemainingMin(totalMinutes); // opcional: volta pro total
+  }
+
+  prevFinishRef.current = finVal;
+}, [tags, totalMinutes]);
+
+// 3) Atualiza remaining baseado no relógio (não reinicia no refresh)
+useEffect(() => {
+  const tick = () => {
+    const startStr = localStorage.getItem(LS_START);
+    const totalStr = localStorage.getItem(LS_TOTAL);
+
+    // Se não tem ciclo ativo salvo, mostra o total
+    if (!startStr || !totalStr) {
+      setRemainingMin(totalMinutes);
+      return;
     }
-    prevStartRef.current = startVal;
-  }, [tags, totalSeconds]);
 
-  // finish
-  useEffect(() => {
-    const finVal = tags["ciclo_finalizado"] ? 1 : 0;
-    if (prevFinishRef.current !== 1 && finVal === 1) {
-      setRunning(false);
-      setRemaining(totalSeconds);
-    }
-    prevFinishRef.current = finVal;
-  }, [tags, totalSeconds]);
+    const startEpoch = Number(startStr);
+    const totalMinSaved = Math.max(1, Math.floor(Number(totalStr) || totalMinutes));
 
-  // ticking a cada 1s
-  useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => {
-      setRemaining((s) => {
-        const next = s - 1;
-        if (next <= 0) {
-          setRunning(false);
-          return 0;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [running, totalSeconds]);
+    const elapsedMs = Date.now() - startEpoch;
+    const elapsedMin = Math.floor(elapsedMs / 60000); // só minutos (sem segundos)
 
-  const progress = totalSeconds > 0 ? remaining / totalSeconds : 0;
-  const radius = 100;
-  const stroke = 14;
-  const C = 2 * Math.PI * radius;
-  const dashOffset = -1 * (C * (1 - progress));
-  const hours = Math.floor(remaining / 3600);
-  const minutes = Math.floor((remaining % 3600) / 60);
-  const timeText =
-    String(hours).padStart(1, "0") + ":" + String(minutes).padStart(2, "0");
+    const nextRemaining = Math.max(totalMinSaved - elapsedMin, 0);
+    setRemainingMin(nextRemaining);
+  };
+
+  tick();
+  const id = setInterval(tick, 1000); // pode ser 1000ms; display muda por minuto, mas mantém sincronizado
+  return () => clearInterval(id);
+}, [totalMinutes]);
+
+// progress do círculo (1 cheio -> 0 vazio)
+const progress = totalMinutes > 0 ? clamp01(remainingMin / totalMinutes) : 0;
+
+// SVG ring
+const radius = 100;
+const stroke = 14;
+const C = 2 * Math.PI * radius;
+const dashOffset = -1 * (C * (1 - progress));
+
+// texto HH:MM
+const timeText = minutesToHHMM(remainingMin);
+
+
 
   // KPIs extras
   const areaLimpaL = (() => {
@@ -200,14 +266,41 @@ const Dashboard = () => {
     return Number.isFinite(L) && L >= 0 ? L : 0;
   })();
 
-  const treesCount = Math.floor(areaLimpaL / 1000);
+  
+// ===== Timer secundário (estático, em minutos) =====
+const otherMinutesRaw = Math.max(
+  0,
+  Math.floor(Number(tags["Timer_Percentual"]) || 0)
+);
+
+// Converter MINUTOS → HH:MM (somente para exibir)
+const otherHours = Math.floor(otherMinutesRaw / 60);
+const otherMinutes = otherMinutesRaw % 60;
+
+const otherTimeText =
+  otherMinutesRaw > 0
+    ? `${String(otherHours).padStart(1, "0")}:${String(otherMinutes).padStart(2, "0")}`
+    : "--:--";
+
+// ===== Estado do ciclo (vem do CLP) =====
+// Ajuste os nomes das tags conforme seu CLP
+const isRunning = Boolean(tags["ciclo_iniciar"]);   // ex: 1 quando está rodando
+const isPaused  = Boolean(tags["ciclo_pausado"]);   // ex: 1 quando está pausado
+
+// Regras que você pediu:
+const canPause = isRunning && !isPaused && !busyPause && !busyResume;
+const canResume = isRunning && isPaused && !busyPause && !busyResume;
+
+
+  //const treesCount = Math.floor(areaLimpaL);
+  const treesCount = areaLimpaL;
   // const fishCount = Number(tags["arealimpa"] ?? 0);
 
   // ---- CO2 evitado (kg) a partir de litros tratados ----
   const CO2_PER_LITER = 0.109; // kg CO2 / L
   const OZ_KWH_PER_M3 = 0.08;  // kWh por m³
   const GRID_KG_PER_KWH = 0.035; // kg CO2/kWh
-  const CO2_OZONE_PER_L = (OZ_KWH_PER_M3 * GRID_KG_PER_KWH) / 1000; // kg/L
+  const CO2_OZONE_PER_L = (OZ_KWH_PER_M3 * GRID_KG_PER_KWH); // kg/L
 
   const carbonCount = Math.max(
     areaLimpaL * (CO2_PER_LITER - CO2_OZONE_PER_L),
@@ -245,14 +338,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          <div className="header-actions">
-            <button
-              className="btn btn-stop"
-              onClick={handleStop}
-              disabled={busyStop}
-            >
-              Parar
-            </button>
+          <div className="header-actions">           
             <button
               className="btn btn-reset"
               onClick={handleReset}
@@ -340,11 +426,22 @@ const Dashboard = () => {
                   <strong>Capacidade:</strong>
                 </div>
                 <div>Total: {TOTAL_CAPT_L}L</div>
+                 <div className="level-min">
+      Mínimo: {MIN_CAPT_L}L
+      <InfoBtn
+        className="info-btn"
+        tip="Volume mínimo recomendado para operação segura do sistema."
+        data-tip="Volume mínimo recomendado para operação segura do sistema."
+        aria-label="Informações sobre nível mínimo"
+      >
+        i
+      </InfoBtn>
+    </div>
                 <div
                   className={
                     "level-current " + (lvlTrat.isFull ? "is-full" : "")
                   }
-                >
+                >             
                   Atual: {lvlTrat.isFull ? "Cheio" : lvlTrat.atual + "L"}
                 </div>
               </div>
@@ -421,12 +518,12 @@ const Dashboard = () => {
                 <span className="emoji" role="img" aria-label="água tratada">
                   💧
                 </span>
-                <span className="impact-text">{areaLimpaL} L</span>
+                <span className="impact-text">{areaLimpaL} m³</span>
               </div>
               <InfoBtn
                 className="info-btn"
-                data-tip="Litros de água tratados no período."
-                tip="Litros de água tratados no período."
+                data-tip="Metros cúbicos de água tratada no período."
+                tip="Metros cúbicos de água tratada no período."
               >
                 i
               </InfoBtn>
@@ -540,35 +637,99 @@ const Dashboard = () => {
 
 
         {/* Timer */}
-        <Card className="timer-card">
-          <div className="timer-wrap">
-            <div className="timer-ring">
-              <svg viewBox="0 0 240 240">
-                <circle
-                  className="timer-bg"
-                  cx="120"
-                  cy="120"
-                  r={radius}
-                  fill="none"
-                  strokeWidth={stroke}
-                />
-                <circle
-                  className="timer-fg"
-                  cx="120"
-                  cy="120"
-                  r={radius}
-                  fill="none"
-                  strokeWidth={stroke}
-                  strokeDasharray={C}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="timer-center">{timeText}</div>
-            </div>
-            <div className="timer-label">Temporizador do ciclo</div>
-          </div>
-        </Card>
+       <Card className="timer-card">
+          {/*
+          {DEV && (
+  <div style={{display:'flex', gap:8, alignItems:'center', margin:'8px 0 16px'}}>
+    <button onClick={devStart}>Start (tag=1)</button>
+    <button onClick={devFinish}>Finish (tag=1)</button>
+    <button onClick={devReset}>Clear</button>
+    <label style={{marginLeft:8}}>
+      Duração (min):{" "}
+      <input
+        type="number"
+        min="0"
+        defaultValue={Math.floor((Number(tags[TAG.totalSec])||0)/60)}
+        onChange={(e)=>devSetMinutes(e.target.value)}
+        style={{width:80}}
+      />
+    </label>
+  </div>
+)}*/}
+
+
+  {/* TÍTULO ACIMA DO TIMER */}
+  <div className="timer-title-top">Temporizador do ciclo</div>
+
+
+  <div className="timer-wrap timer-wrap--stack">
+    <div className="timer-ring">
+      <svg viewBox="0 0 240 240">
+        <circle
+          className="timer-bg"
+          cx="120" cy="120" r={radius}
+          fill="none" strokeWidth={stroke}
+        />
+        <circle
+          className="timer-fg"
+          cx="120" cy="120" r={radius}
+          fill="none" strokeWidth={stroke}
+          strokeDasharray={C}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+        />
+      </svg>
+
+
+      <div className="timer-center">{timeText}</div>
+    </div>
+
+
+    {/* NOVO TEXTO NO LUGAR DO ANTIGO */}
+    <div className="timer-label">Tempo do ciclo atual</div>
+
+
+    {/* sub horário */}
+    <div className="timer-subtime">{otherTimeText}</div>
+
+
+    {/* botões */}
+  <div className="timer-actions">
+  <button
+    className="btn btn-resume"
+    onClick={handleResumeCycle}
+    disabled={!canResume}
+    title={
+      !isRunning
+        ? "Ciclo não está rodando"
+        : isPaused
+          ? "Retomar ciclo"
+          : "Disponível após pausar"
+    }
+  >
+    Retomar
+  </button>
+
+  <button
+    className="btn btn-pause-danger"
+    onClick={handlePauseCycle}
+    disabled={!canPause}
+    title={
+      !isRunning
+        ? "Ciclo não está rodando"
+        : !isPaused
+          ? "Pausar ciclo"
+          : "Já está pausado"
+    }
+  >
+    Pausar
+  </button>
+</div>
+
+
+  </div>
+</Card>
+
       </div>
 
       {/* Elétrica */}
